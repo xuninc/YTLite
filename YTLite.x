@@ -38,7 +38,11 @@ static UIImage *YTImageNamed(NSString *imageName) {
 
     NSString *description = [self description];
 
-    NSArray *ads = @[@"brand_promo", @"product_carousel", @"product_engagement_panel", @"product_item", @"text_search_ad", @"text_image_button_layout", @"carousel_headered_layout", @"carousel_footered_layout", @"square_image_layout", @"landscape_image_wide_button_layout", @"feed_ad_metadata"];
+    static NSSet *ads;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        ads = [NSSet setWithArray:@[@"brand_promo", @"product_carousel", @"product_engagement_panel", @"product_item", @"text_search_ad", @"text_image_button_layout", @"carousel_headered_layout", @"carousel_footered_layout", @"square_image_layout", @"landscape_image_wide_button_layout", @"feed_ad_metadata"]];
+    });
     if (ytlBool(@"noAds") && [ads containsObject:description]) {
         return [NSData data];
     }
@@ -166,8 +170,12 @@ static UIImage *YTImageNamed(NSString *imageName) {
 - (void)setImage:(UIImage *)image {
     if (!ytlBool(@"premiumYTLogo")) return %orig;
 
-    NSString *resourcesPath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"Frameworks/Module_Framework.framework/Innertube_Resources.bundle"];
-    NSBundle *frameworkBundle = [NSBundle bundleWithPath:resourcesPath];
+    static NSBundle *frameworkBundle;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSString *resourcesPath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"Frameworks/Module_Framework.framework/Innertube_Resources.bundle"];
+        frameworkBundle = [NSBundle bundleWithPath:resourcesPath];
+    });
 
     if ([[image description] containsString:@"Resources: youtube_logo)"]) {
         image = [UIImage imageNamed:@"youtube_premium_logo" inBundle:frameworkBundle compatibleWithTraitCollection:nil];
@@ -466,7 +474,9 @@ void autoSkipShorts(YTPlayerViewController *self, YTSingleVideoController *video
         YTMainAppVideoPlayerOverlayViewController *overlayVC = (YTMainAppVideoPlayerOverlayViewController *)self.activeVideoPlayerOverlay;
 
         NSArray *speedLabels = @[@0.25, @0.5, @0.75, @1.0, @1.25, @1.5, @1.75, @2.0, @3.0, @4.0, @5.0];
-        [overlayVC setPlaybackRate:[speedLabels[ytlInt(@"autoSpeedIndex")] floatValue]];
+        NSInteger speedIdx = ytlInt(@"autoSpeedIndex");
+        if (speedIdx < 0 || speedIdx >= (NSInteger)speedLabels.count) return;
+        [overlayVC setPlaybackRate:[speedLabels[speedIdx] floatValue]];
     }
 }
 
@@ -490,6 +500,7 @@ void autoSkipShorts(YTPlayerViewController *self, YTSingleVideoController *video
     }
 
     NSArray *qualityLabels = @[@"Default", bestQualityLabel, @"2160p60", @"2160p", @"1440p60", @"1440p", @"1080p60", @"1080p", @"720p60", @"720p", @"480p", @"360p"];
+    if (kQualityIndex < 0 || kQualityIndex >= (NSInteger)qualityLabels.count) return;
     NSString *qualityLabel = qualityLabels[kQualityIndex];
 
     if (![qualityLabel isEqualToString:bestQualityLabel]) {
@@ -1060,8 +1071,15 @@ static void genImageFromLayer(CALayer *layer, UIColor *backgroundColor, void (^c
                 YTDefaultSheetController *sheetController = [%c(YTDefaultSheetController) sheetControllerWithParentResponder:nil];
 
                 [sheetController addAction:[%c(YTActionSheetAction) actionWithTitle:LOC(@"SaveProfilePicture") iconImage:YTImageNamed(@"yt_outline_image_24pt") style:0 handler:^ {
-                    UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
-                    [[%c(YTToastResponderEvent) eventWithMessage:LOC(@"Saved") firstResponder:presentingVC] send];
+                    [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+                        PHAssetCreationRequest *request = [PHAssetCreationRequest creationRequestForAssetFromImage:image];
+                        request.creationDate = [NSDate date];
+                    } completionHandler:^(BOOL success, NSError *saveError) {
+                        NSString *message = success ? LOC(@"Saved") : (saveError.localizedDescription ?: LOC(@"Error"));
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [[%c(YTToastResponderEvent) eventWithMessage:message firstResponder:presentingVC] send];
+                        });
+                    }];
                 }]];
 
                 [sheetController addAction:[%c(YTActionSheetAction) actionWithTitle:LOC(@"CopyProfilePicture") iconImage:YTImageNamed(@"yt_outline_library_image_24pt") style:0 handler:^ {
@@ -1320,8 +1338,10 @@ static _Atomic BOOL isTabSelected = NO;
     YTWatchViewController *watchVC = containerController ? containerController.parentViewController : nil;
     YTPlayerViewController *playerVC = watchVC ? watchVC.playerViewController : nil;
     if (!playerVC) return;
-    NSString *title = playerVC.playerResponse.playerData.videoDetails.title;
-    NSString *shortDescription = playerVC.playerResponse.playerData.videoDetails.shortDescription;
+    YTIVideoDetails *videoDetails = playerVC.playerResponse.playerData.videoDetails;
+    if (!videoDetails) return;
+    NSString *title = videoDetails.title;
+    NSString *shortDescription = videoDetails.shortDescription;
 
     YTDefaultSheetController *sheetController = [%c(YTDefaultSheetController) sheetControllerWithParentResponder:nil];
 
@@ -1339,7 +1359,7 @@ static _Atomic BOOL isTabSelected = NO;
 }
 %end
 
-static CGFloat rateBeforeSpeedmaster = 1.0;
+static _Atomic CGFloat rateBeforeSpeedmaster = 1.0;
 
 static void manageSpeedmasterYTLite(UILongPressGestureRecognizer *gesture, YTMainAppVideoPlayerOverlayViewController *delegate, YTInlinePlayerScrubUserEducationView *edu) {
     NSArray *speedLabels = @[@0, @2.0, @0.25, @0.5, @0.75, @1.0, @1.25, @1.5, @1.75, @2.0, @3.0, @4.0, @5.0];
