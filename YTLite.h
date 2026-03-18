@@ -247,7 +247,7 @@
 @interface ASDisplayNode ()
 @property (nonatomic, assign, readonly) UIViewController *closestViewController;
 @property (atomic, assign, readonly) ASNodeAncestryEnumerator *supernodes;
-// @property (atomic, copy, readwrite) NSArray *yogaChildren;
+@property (atomic, copy, readwrite) NSArray *yogaChildren;
 @property (atomic) CALayer *layer;
 @end
 

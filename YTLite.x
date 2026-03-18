@@ -800,7 +800,7 @@ static BOOL findCell(ASNodeController *nodeController, NSArray <NSString *> *ide
 - (void)setMultiFormatLinkElementRenderer:(id)renderer { if (!ytlBool(@"hideShortsSource")) %orig; }
 %end
 
-static BOOL isOverlayShown = YES;
+static _Atomic BOOL isOverlayShown = YES;
 
 %hook YTPlayerView
 - (void)didPinch:(UIPinchGestureRecognizer *)gesture {
@@ -861,6 +861,8 @@ static BOOL isOverlayShown = YES;
 %end
 
 static void downloadImageFromURL(UIResponder *responder, NSURL *URL, BOOL download) {
+    if (!URL) return;
+
     NSString *URLString = URL.absoluteString;
 
     if (ytlBool(@"fixAlbums") && [URLString hasPrefix:@"https://yt3."]) {
@@ -874,42 +876,61 @@ static void downloadImageFromURL(UIResponder *responder, NSURL *URL, BOOL downlo
             NSString *newURL = [URLString stringByReplacingOccurrencesOfString:[URLString substringFromIndex:croppedURL.location] withString:@"nd-v1"];
             downloadURL = [NSURL URLWithString:newURL];
         }
-    } else {
-        downloadURL = URL;
     }
+    if (!downloadURL) downloadURL = URL;
 
-    NSURLSession *session = [NSURLSession sharedSession];
+    NSURLSessionConfiguration *config = [NSURLSessionConfiguration defaultSessionConfiguration];
+    config.timeoutIntervalForRequest = 30;
+    config.timeoutIntervalForResource = 60;
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:config];
+
     [[session dataTaskWithURL:downloadURL completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-        if (data) {
-            if (download) {
-                [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
-                    PHAssetCreationRequest *request = [PHAssetCreationRequest creationRequestForAsset];
-                    [request addResourceWithType:PHAssetResourceTypePhoto data:data options:nil];
-                } completionHandler:^(BOOL success, NSError *error) {
-                    [[%c(YTToastResponderEvent) eventWithMessage:success ? LOC(@"Saved") : [NSString stringWithFormat:LOC(@"%@: %@"), LOC(@"Error"), error.localizedDescription] firstResponder:responder] send];
-                }];
-            } else {
-                [UIPasteboard generalPasteboard].image = [UIImage imageWithData:data];
-                [[%c(YTToastResponderEvent) eventWithMessage:LOC(@"Copied") firstResponder:responder] send];
-            }
+        if (error || !data || data.length == 0) {
+            NSString *errorMsg = error.localizedDescription ?: LOC(@"Error");
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[%c(YTToastResponderEvent) eventWithMessage:errorMsg firstResponder:responder] send];
+            });
+            return;
+        }
+
+        if (download) {
+            [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+                PHAssetCreationRequest *request = [PHAssetCreationRequest creationRequestForAsset];
+                [request addResourceWithType:PHAssetResourceTypePhoto data:data options:nil];
+            } completionHandler:^(BOOL success, NSError *saveError) {
+                NSString *message = success ? LOC(@"Saved") : (saveError.localizedDescription ?: LOC(@"Error"));
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[%c(YTToastResponderEvent) eventWithMessage:message firstResponder:responder] send];
+                });
+            }];
         } else {
-            [[%c(YTToastResponderEvent) eventWithMessage:[NSString stringWithFormat:LOC(@"%@: %@"), LOC(@"Error"), error.localizedDescription] firstResponder:responder] send];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                UIImage *image = [UIImage imageWithData:data];
+                if (image) {
+                    [UIPasteboard generalPasteboard].image = image;
+                    [[%c(YTToastResponderEvent) eventWithMessage:LOC(@"Copied") firstResponder:responder] send];
+                } else {
+                    [[%c(YTToastResponderEvent) eventWithMessage:LOC(@"Error") firstResponder:responder] send];
+                }
+            });
         }
     }] resume];
 }
 
 static void genImageFromLayer(CALayer *layer, UIColor *backgroundColor, void (^completionHandler)(UIImage *)) {
-    UIGraphicsBeginImageContextWithOptions(layer.frame.size, NO, 0.0);
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextSetFillColorWithColor(context, backgroundColor.CGColor);
-    CGContextFillRect(context, CGRectMake(0, 0, layer.frame.size.width, layer.frame.size.height));
-    [layer renderInContext:context];
-    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
+    if (!layer || !completionHandler) return;
 
-    if (completionHandler) {
-        completionHandler(image);
-    }
+    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:layer.frame.size];
+    UIImage *image = [renderer imageWithActions:^(UIGraphicsImageRendererContext *rendererContext) {
+        CGContextRef ctx = rendererContext.CGContext;
+        if (backgroundColor) {
+            CGContextSetFillColorWithColor(ctx, backgroundColor.CGColor);
+            CGContextFillRect(ctx, CGRectMake(0, 0, layer.frame.size.width, layer.frame.size.height));
+        }
+        [layer renderInContext:ctx];
+    }];
+
+    completionHandler(image);
 }
 
 %hook ELMContainerNode
@@ -1012,41 +1033,54 @@ static void genImageFromLayer(CALayer *layer, UIColor *backgroundColor, void (^c
 
         ASNetworkImageNode *imageNode = (ASNetworkImageNode *)self.keepalive_node;
         NSString *URLString = imageNode.URL.absoluteString;
-        if (URLString) {
-            NSRange sizeRange = [URLString rangeOfString:@"=s"];
-            if (sizeRange.location != NSNotFound) {
-                NSRange dashRange = [URLString rangeOfString:@"-" options:0 range:NSMakeRange(sizeRange.location, URLString.length - sizeRange.location)];
-                if (dashRange.location != NSNotFound) {
-                    NSString *newURLString = [URLString stringByReplacingCharactersInRange:NSMakeRange(sizeRange.location + 2, dashRange.location - sizeRange.location - 2) withString:@"1024"];
-                    NSURL *PFPURL = [NSURL URLWithString:newURLString];
+        if (!URLString) return;
 
-                    UIImage *image = [UIImage imageWithData:[NSData dataWithContentsOfURL:PFPURL]];
-                    if (image) {
-                        YTDefaultSheetController *sheetController = [%c(YTDefaultSheetController) sheetControllerWithParentResponder:nil];
-    
-                        [sheetController addAction:[%c(YTActionSheetAction) actionWithTitle:LOC(@"SaveProfilePicture") iconImage:YTImageNamed(@"yt_outline_image_24pt") style:0 handler:^ {
-                            UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+        NSRange sizeRange = [URLString rangeOfString:@"=s"];
+        if (sizeRange.location == NSNotFound) return;
 
-                            [[%c(YTToastResponderEvent) eventWithMessage:LOC(@"Saved") firstResponder:self.keepalive_node.closestViewController] send];
-                        }]];
+        NSRange dashRange = [URLString rangeOfString:@"-" options:0 range:NSMakeRange(sizeRange.location, URLString.length - sizeRange.location)];
+        if (dashRange.location == NSNotFound) return;
 
-                        [sheetController addAction:[%c(YTActionSheetAction) actionWithTitle:LOC(@"CopyProfilePicture") iconImage:YTImageNamed(@"yt_outline_library_image_24pt") style:0 handler:^ {
-                            [UIPasteboard generalPasteboard].image = image;
-                            [[%c(YTToastResponderEvent) eventWithMessage:LOC(@"Copied") firstResponder:self.keepalive_node.closestViewController] send];
-                        }]];
+        NSString *newURLString = [URLString stringByReplacingCharactersInRange:NSMakeRange(sizeRange.location + 2, dashRange.location - sizeRange.location - 2) withString:@"1024"];
+        NSURL *PFPURL = [NSURL URLWithString:newURLString];
+        if (!PFPURL) return;
 
-                        [sheetController presentFromViewController:self.keepalive_node.closestViewController animated:YES completion:nil];
-                    }
-                }
+        UIViewController *presentingVC = self.keepalive_node.closestViewController;
+        [[NSURLSession.sharedSession dataTaskWithURL:PFPURL completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+            UIImage *image = data ? [UIImage imageWithData:data] : nil;
+            if (!image) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    NSString *msg = error ? error.localizedDescription : LOC(@"Error");
+                    [[%c(YTToastResponderEvent) eventWithMessage:msg firstResponder:presentingVC] send];
+                });
+                return;
             }
-        }
+
+            dispatch_async(dispatch_get_main_queue(), ^{
+                YTDefaultSheetController *sheetController = [%c(YTDefaultSheetController) sheetControllerWithParentResponder:nil];
+
+                [sheetController addAction:[%c(YTActionSheetAction) actionWithTitle:LOC(@"SaveProfilePicture") iconImage:YTImageNamed(@"yt_outline_image_24pt") style:0 handler:^ {
+                    UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+                    [[%c(YTToastResponderEvent) eventWithMessage:LOC(@"Saved") firstResponder:presentingVC] send];
+                }]];
+
+                [sheetController addAction:[%c(YTActionSheetAction) actionWithTitle:LOC(@"CopyProfilePicture") iconImage:YTImageNamed(@"yt_outline_library_image_24pt") style:0 handler:^ {
+                    [UIPasteboard generalPasteboard].image = image;
+                    [[%c(YTToastResponderEvent) eventWithMessage:LOC(@"Copied") firstResponder:presentingVC] send];
+                }]];
+
+                [sheetController presentFromViewController:presentingVC animated:YES completion:nil];
+            });
+        }] resume];
     }
 }
 
 %new
 - (void)postManager:(UILongPressGestureRecognizer *)sender {
     if (sender.state == UIGestureRecognizerStateBegan) {
-        ELMContainerNode *nodeForLayer = (ELMContainerNode *)self.keepalive_node.yogaChildren[0];
+        NSArray *yogaChildren = self.keepalive_node.yogaChildren;
+        if (!yogaChildren || yogaChildren.count == 0) return;
+        ELMContainerNode *nodeForLayer = (ELMContainerNode *)yogaChildren[0];
         ELMContainerNode *containerNode = (ELMContainerNode *)self.keepalive_node;
         NSString *text = containerNode.copiedComment;
         NSURL *URL = containerNode.copiedURL;
@@ -1211,14 +1245,17 @@ static void genImageFromLayer(CALayer *layer, UIColor *backgroundColor, void (^c
 %end
 
 // Startup Tab
-BOOL isTabSelected = NO;
+static _Atomic BOOL isTabSelected = NO;
 %hook YTPivotBarViewController
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
 
     if (!isTabSelected && !ytlBool(@"shortsOnlyMode")) {
         NSArray *pivotIdentifiers = @[@"FEwhat_to_watch", @"FEexplore", @"FEshorts", @"FEsubscriptions", @"FElibrary"];
-        [self selectItemWithPivotIdentifier:pivotIdentifiers[ytlInt(@"pivotIndex")]];
+        NSInteger pivotIndex = ytlInt(@"pivotIndex");
+        if (pivotIndex >= 0 && pivotIndex < (NSInteger)pivotIdentifiers.count) {
+            [self selectItemWithPivotIdentifier:pivotIdentifiers[pivotIndex]];
+        }
         isTabSelected = YES;
     }
 
@@ -1278,7 +1315,11 @@ BOOL isTabSelected = NO;
 
 %new
 - (void)didTapCopyInfoButton:(UIButton *)sender {
-    YTPlayerViewController *playerVC = self.resizeDelegate.parentViewController.parentViewController.parentViewController.playerViewController;
+    YTEngagementPanelNavigationController *navController = (YTEngagementPanelNavigationController *)self.resizeDelegate.parentViewController;
+    YTEngagementPanelContainerController *containerController = navController ? navController.parentViewController : nil;
+    YTWatchViewController *watchVC = containerController ? containerController.parentViewController : nil;
+    YTPlayerViewController *playerVC = watchVC ? watchVC.playerViewController : nil;
+    if (!playerVC) return;
     NSString *title = playerVC.playerResponse.playerData.videoDetails.title;
     NSString *shortDescription = playerVC.playerResponse.playerData.videoDetails.shortDescription;
 
@@ -1298,18 +1339,21 @@ BOOL isTabSelected = NO;
 }
 %end
 
-CGFloat rateBeforeSpeedmaster = 1.0;
+static CGFloat rateBeforeSpeedmaster = 1.0;
 
 static void manageSpeedmasterYTLite(UILongPressGestureRecognizer *gesture, YTMainAppVideoPlayerOverlayViewController *delegate, YTInlinePlayerScrubUserEducationView *edu) {
     NSArray *speedLabels = @[@0, @2.0, @0.25, @0.5, @0.75, @1.0, @1.25, @1.5, @1.75, @2.0, @3.0, @4.0, @5.0];
 
+    NSInteger speedIndex = ytlInt(@"speedIndex");
+    if (speedIndex < 0 || speedIndex >= (NSInteger)speedLabels.count) return;
+
     YTLabel *label = [edu valueForKey:@"_userEducationLabel"];
     edu.labelType = 1;
-    [label setValue:[NSString stringWithFormat:@"%@: %@×", LOC(@"PlaybackSpeed"), speedLabels[ytlInt(@"speedIndex")]] forKey:@"text"];
+    [label setValue:[NSString stringWithFormat:@"%@: %@×", LOC(@"PlaybackSpeed"), speedLabels[speedIndex]] forKey:@"text"];
 
     if (gesture.state == UIGestureRecognizerStateBegan) {
         rateBeforeSpeedmaster = delegate.currentPlaybackRate;
-        [delegate setPlaybackRate:[speedLabels[ytlInt(@"speedIndex")] floatValue]];
+        [delegate setPlaybackRate:[speedLabels[speedIndex] floatValue]];
         [edu setVisible:YES];
     }
 
