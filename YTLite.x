@@ -871,6 +871,18 @@ static _Atomic BOOL isOverlayShown = YES;
 }
 %end
 
+static NSURLSession *_imageDownloadSession;
+static NSURLSession *imageDownloadSession(void) {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSURLSessionConfiguration *config = [NSURLSessionConfiguration defaultSessionConfiguration];
+        config.timeoutIntervalForRequest = 30;
+        config.timeoutIntervalForResource = 60;
+        _imageDownloadSession = [NSURLSession sessionWithConfiguration:config];
+    });
+    return _imageDownloadSession;
+}
+
 static void downloadImageFromURL(UIResponder *responder, NSURL *URL, BOOL download) {
     if (!URL) return;
 
@@ -880,22 +892,16 @@ static void downloadImageFromURL(UIResponder *responder, NSURL *URL, BOOL downlo
         URLString = [URLString stringByReplacingOccurrencesOfString:@"https://yt3." withString:@"https://yt4."];
     }
 
-    NSURL *downloadURL = nil;
     if ([URLString containsString:@"c-fcrop"]) {
         NSRange croppedURL = [URLString rangeOfString:@"c-fcrop"];
         if (croppedURL.location != NSNotFound) {
-            NSString *newURL = [URLString stringByReplacingOccurrencesOfString:[URLString substringFromIndex:croppedURL.location] withString:@"nd-v1"];
-            downloadURL = [NSURL URLWithString:newURL];
+            URLString = [URLString stringByReplacingOccurrencesOfString:[URLString substringFromIndex:croppedURL.location] withString:@"nd-v1"];
         }
     }
-    if (!downloadURL) downloadURL = URL;
 
-    NSURLSessionConfiguration *config = [NSURLSessionConfiguration defaultSessionConfiguration];
-    config.timeoutIntervalForRequest = 30;
-    config.timeoutIntervalForResource = 60;
-    NSURLSession *session = [NSURLSession sessionWithConfiguration:config];
+    NSURL *downloadURL = [NSURL URLWithString:URLString] ?: URL;
 
-    [[session dataTaskWithURL:downloadURL completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+    [[imageDownloadSession() dataTaskWithURL:downloadURL completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         if (error || !data || data.length == 0) {
             NSString *errorMsg = error.localizedDescription ?: LOC(@"Error");
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -1057,7 +1063,7 @@ static void genImageFromLayer(CALayer *layer, UIColor *backgroundColor, void (^c
         if (!PFPURL) return;
 
         UIViewController *presentingVC = self.keepalive_node.closestViewController;
-        [[NSURLSession.sharedSession dataTaskWithURL:PFPURL completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        [[imageDownloadSession() dataTaskWithURL:PFPURL completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             UIImage *image = data ? [UIImage imageWithData:data] : nil;
             if (!image) {
                 dispatch_async(dispatch_get_main_queue(), ^{
@@ -1129,9 +1135,11 @@ static void genImageFromLayer(CALayer *layer, UIColor *backgroundColor, void (^c
                 [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
                     PHAssetCreationRequest *request = [PHAssetCreationRequest creationRequestForAssetFromImage:image];
                     request.creationDate = [NSDate date];
-                } completionHandler:^(BOOL success, NSError *error) {
-                    NSString *message = success ? LOC(@"Saved") : [NSString stringWithFormat:LOC(@"%@: %@"), LOC(@"Error"), error.localizedDescription];
-                    [[%c(YTToastResponderEvent) eventWithMessage:message firstResponder:containerNode.closestViewController] send];
+                } completionHandler:^(BOOL success, NSError *saveError) {
+                    NSString *message = success ? LOC(@"Saved") : (saveError.localizedDescription ?: LOC(@"Error"));
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [[%c(YTToastResponderEvent) eventWithMessage:message firstResponder:containerNode.closestViewController] send];
+                    });
                 }];
             });
         }]];
@@ -1170,9 +1178,11 @@ static void genImageFromLayer(CALayer *layer, UIColor *backgroundColor, void (^c
                 [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
                     PHAssetCreationRequest *request = [PHAssetCreationRequest creationRequestForAssetFromImage:image];
                     request.creationDate = [NSDate date];
-                } completionHandler:^(BOOL success, NSError *error) {
-                    NSString *message = success ? LOC(@"Saved") : [NSString stringWithFormat:LOC(@"%@: %@"), LOC(@"Error"), error.localizedDescription];
-                    [[%c(YTToastResponderEvent) eventWithMessage:message firstResponder:containerNode.closestViewController] send];
+                } completionHandler:^(BOOL success, NSError *saveError) {
+                    NSString *message = success ? LOC(@"Saved") : (saveError.localizedDescription ?: LOC(@"Error"));
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [[%c(YTToastResponderEvent) eventWithMessage:message firstResponder:containerNode.closestViewController] send];
+                    });
                 }];
             });
         }]];
