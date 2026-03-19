@@ -540,25 +540,7 @@ static YTPDB *_sharedYTPDB = nil;
 
 @end
 
-// MARK: - Statistics
-
-@implementation Statistics
-
-- (instancetype)initWithId:(long)executionId videoFrameNumber:(long)videoFrameNumber fps:(float)fps quality:(float)quality size:(long long)size time:(int)time bitrate:(double)bitrate speed:(double)speed {
-    self = [super init];
-    if (self) {
-        _statisticsFrameNumber = videoFrameNumber;
-        _statisticsFps = fps;
-        _statisticsQuality = quality;
-        _statisticsSize = size;
-        _statisticsTime = time;
-        _statisticsBitrate = bitrate;
-        _statisticsSpeed = speed;
-    }
-    return self;
-}
-
-@end
+// Statistics class now provided by FFmpeg/Statistics.m
 
 // MARK: - InitWorkaround
 

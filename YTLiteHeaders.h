@@ -169,39 +169,11 @@
 
 @end
 
-// MARK: - MobileFFmpeg (from mobile-ffmpeg library)
-
-@interface MobileFFmpeg : NSObject
-+ (int)execute:(NSString *)command;
-+ (int)execute:(NSString *)command delimiter:(NSString *)delimiter;
-+ (void)executeAsync:(NSString *)command withCallback:(id)callback;
-+ (void)executeAsync:(NSString *)command withCallback:(id)callback andDispatchQueue:(dispatch_queue_t)queue;
-+ (int)executeWithArguments:(NSArray *)arguments;
-+ (void)executeWithArgumentsAsync:(NSArray *)arguments withCallback:(id)callback;
-+ (void)executeWithArgumentsAsync:(NSArray *)arguments withCallback:(id)callback andDispatchQueue:(dispatch_queue_t)queue;
-+ (void)cancel;
-+ (NSString *)registerNewFFmpegPipe;
-+ (void)closeFFmpegPipe:(NSString *)pipe;
-+ (NSString *)argumentsToString:(NSArray *)arguments;
-@end
-
-@interface MobileFFmpegConfig : NSObject
-+ (void)setLogLevel:(int)level;
-+ (void)setLogDelegate:(id)delegate;
-+ (void)setStatisticsDelegate:(id)delegate;
-+ (void)setFontDirectory:(NSString *)directory with:(NSDictionary *)mapping;
-+ (void)setFontconfigConfigurationPath:(NSString *)path;
-+ (NSString *)getLastCommandOutput;
-+ (int)getLastReturnCode;
-+ (void)resetStatistics;
-+ (Statistics *)getLastReceivedStatistics;
-@end
-
-@interface FFmpegExecution : NSObject
-@property (nonatomic, assign) long executionId;
-@property (nonatomic, strong) NSArray *arguments;
-- (instancetype)initWithExecutionId:(long)executionId andArguments:(NSArray *)arguments;
-@end
+// MobileFFmpeg classes - imported from FFmpeg/ source directory
+#import "FFmpeg/MobileFFmpeg.h"
+#import "FFmpeg/MobileFFmpegConfig.h"
+#import "FFmpeg/FFmpegExecution.h"
+#import "FFmpeg/Statistics.h"
 
 // MARK: - SRTParser (Subtitle parsing)
 
@@ -418,21 +390,7 @@
 
 @end
 
-// MARK: - Statistics (FFmpeg statistics)
-
-@interface Statistics : NSObject
-
-@property (nonatomic, assign) long statisticsFrameNumber;
-@property (nonatomic, assign) float statisticsFps;
-@property (nonatomic, assign) float statisticsQuality;
-@property (nonatomic, assign) long long statisticsSize;
-@property (nonatomic, assign) int statisticsTime;
-@property (nonatomic, assign) double statisticsBitrate;
-@property (nonatomic, assign) double statisticsSpeed;
-
-- (instancetype)initWithId:(long)executionId videoFrameNumber:(long)videoFrameNumber fps:(float)fps quality:(float)quality size:(long long)size time:(int)time bitrate:(double)bitrate speed:(double)speed;
-
-@end
+// Statistics class now imported from FFmpeg/Statistics.h above
 
 // MARK: - YTLHelper (General helper)
 
@@ -564,18 +522,6 @@
 @interface InitWorkaround : NSObject
 @end
 
-// MARK: - Utility classes from mobile-ffmpeg
-
-@interface CallbackData : NSObject
-@property (nonatomic, assign) long executionId;
-@property (nonatomic, assign) int logLevel;
-@property (nonatomic, strong) NSData *logData;
-- (instancetype)initWithId:(long)executionId logLevel:(int)logLevel data:(NSData *)data;
-@end
-
-@interface AtomicLong : NSObject
-- (instancetype)initWithInitialValue:(long)initialValue;
-@end
-
-@interface ArchDetect : NSObject
-@end
+// mobile-ffmpeg utility classes - imported from FFmpeg/ source directory
+#import "FFmpeg/AtomicLong.h"
+#import "FFmpeg/ArchDetect.h"

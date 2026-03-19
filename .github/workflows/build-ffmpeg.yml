@@ -1,0 +1,102 @@
+name: Build FFmpeg for iOS
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'build_ffmpeg.sh'
+      - '.github/workflows/build-ffmpeg.yml'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install automake autoconf libtool pkg-config nasm
+
+      - name: Build FFmpeg static libraries
+        run: |
+          set -e
+
+          FFMPEG_DIR="$GITHUB_WORKSPACE/FFmpeg"
+          OUTPUT_LIB="$FFMPEG_DIR/lib"
+          OUTPUT_INCLUDE="$FFMPEG_DIR/include"
+          BUILD_DIR="/tmp/ffmpeg-build"
+
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+          CC=$(xcrun --sdk iphoneos --find clang)
+
+          echo "SDK: $SDK_PATH"
+          echo "CC: $CC"
+
+          # Clone FFmpeg 4.4
+          git clone --depth 1 --branch n4.4 https://github.com/FFmpeg/FFmpeg.git /tmp/ffmpeg-src
+          cd /tmp/ffmpeg-src
+
+          CFLAGS="-arch arm64 -isysroot $SDK_PATH -miphoneos-version-min=13.0 -Oz -fembed-bitcode -DMOBILE_FFMPEG_LTS"
+          LDFLAGS="-arch arm64 -isysroot $SDK_PATH -miphoneos-version-min=13.0"
+
+          ./configure \
+            --prefix="$BUILD_DIR" \
+            --enable-cross-compile \
+            --target-os=darwin \
+            --arch=aarch64 \
+            --sysroot="$SDK_PATH" \
+            --cc="$CC" \
+            --extra-cflags="$CFLAGS" \
+            --extra-ldflags="$LDFLAGS" \
+            --enable-pic \
+            --enable-static \
+            --disable-shared \
+            --enable-small \
+            --disable-doc \
+            --disable-programs \
+            --disable-debug \
+            --disable-network \
+            --disable-autodetect \
+            --enable-videotoolbox \
+            --enable-audiotoolbox \
+            --disable-openssl \
+            --disable-securetransport \
+            --disable-xlib \
+            --disable-sdl2 \
+            --disable-txtpages \
+            --enable-avcodec \
+            --enable-avformat \
+            --enable-avutil \
+            --enable-swresample \
+            --enable-swscale \
+            --enable-avfilter \
+            --enable-avdevice \
+            --enable-postproc
+
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+          # Copy to output
+          mkdir -p "$OUTPUT_LIB" "$OUTPUT_INCLUDE"
+          cp "$BUILD_DIR/lib/"*.a "$OUTPUT_LIB/"
+          cp -r "$BUILD_DIR/include/"* "$OUTPUT_INCLUDE/"
+          cp /tmp/ffmpeg-src/config.h "$OUTPUT_INCLUDE/"
+
+          echo "=== Built libraries ==="
+          ls -la "$OUTPUT_LIB/"
+
+      - name: Upload FFmpeg artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-ios-arm64
+          path: |
+            FFmpeg/lib/
+            FFmpeg/include/
+          retention-days: 90
+
+      - name: Commit FFmpeg libraries
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add FFmpeg/lib/ FFmpeg/include/
+          git diff --staged --quiet || git commit -m "Add prebuilt FFmpeg static libraries for iOS arm64"
+          git push
