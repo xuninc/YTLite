@@ -6,6 +6,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (class, readonly, strong) YTLUserDefaults *standardUserDefaults;
 
++ (instancetype)sharedInstance;
+
 - (void)reset;
 
 + (void)resetUserDefaults;

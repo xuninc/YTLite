@@ -3,6 +3,33 @@
 
 #import "YTLiteHeaders.h"
 
+static void downloadImageFromURL(NSURL *URL, BOOL download) {
+    if (!URL) return;
+
+    NSURLSessionConfiguration *config = [NSURLSessionConfiguration ephemeralSessionConfiguration];
+    config.timeoutIntervalForRequest = 30;
+    config.timeoutIntervalForResource = 60;
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:config];
+
+    [[session dataTaskWithURL:URL completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        if (error || !data || data.length == 0) return;
+
+        if (download) {
+            [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+                PHAssetCreationRequest *request = [PHAssetCreationRequest creationRequestForAsset];
+                [request addResourceWithType:PHAssetResourceTypePhoto data:data options:nil];
+            } completionHandler:nil];
+        } else {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                UIImage *image = [UIImage imageWithData:data];
+                if (image) {
+                    [UIPasteboard generalPasteboard].image = image;
+                }
+            });
+        }
+    }] resume];
+}
+
 @implementation DownloadMenuHelper
 
 - (void)showDownloadSheet:(id)playerResponse withSender:(id)sender {

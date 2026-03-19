@@ -25,9 +25,7 @@
 - (void)downloadDidFailureWithError:(NSError *)error;
 @end
 
-@protocol StatisticsDelegate <NSObject>
-- (void)statisticsCallback:(Statistics *)statistics;
-@end
+// StatisticsDelegate protocol is declared in FFmpeg/StatisticsDelegate.h
 
 // MARK: - YTPDownloader (Core chunked file downloader)
 
@@ -245,8 +243,8 @@
 
 - (UIColor *)colorForSegment:(NSString *)segment;
 - (UIImage *)segmentIcon:(NSString *)segment;
-- (UIColorWell *)colorWellForKey:(NSString *)key title:(NSString *)title;
-- (void)colorWellTap:(UIColorWell *)sender;
+- (UIColorWell *)colorWellForKey:(NSString *)key title:(NSString *)title API_AVAILABLE(ios(14.0));
+- (void)colorWellTap:(UIColorWell *)sender API_AVAILABLE(ios(14.0));
 
 @end
 
