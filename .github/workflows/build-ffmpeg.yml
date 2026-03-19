@@ -83,6 +83,17 @@ jobs:
           cp -r "$BUILD_DIR/include/"* "$OUTPUT_INCLUDE/"
           cp /tmp/ffmpeg-src/config.h "$OUTPUT_INCLUDE/"
 
+          # Copy internal headers needed by fftools source files
+          for f in libavutil/thread.h libavutil/internal.h libavutil/libm.h libavutil/timer.h \
+                   libavutil/reverse.h libavutil/wchar_filename.h \
+                   libavcodec/mathops.h libavformat/network.h libavformat/os_support.h libavformat/url.h; do
+            mkdir -p "$OUTPUT_INCLUDE/$(dirname $f)"
+            cp "/tmp/ffmpeg-src/$f" "$OUTPUT_INCLUDE/$f"
+          done
+          # Copy arch-specific headers if they exist
+          mkdir -p "$OUTPUT_INCLUDE/libavutil/aarch64"
+          cp /tmp/ffmpeg-src/libavutil/aarch64/timer.h "$OUTPUT_INCLUDE/libavutil/aarch64/" 2>/dev/null || true
+
           echo "=== Built libraries ==="
           ls -la "$OUTPUT_LIB/"
 
