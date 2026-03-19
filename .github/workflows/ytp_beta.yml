@@ -45,12 +45,6 @@ on:
         required: true
         type: string
 
-      tweak_url:
-        description: "URL to the YouTube Plus tweak file"
-        default: ""
-        required: true
-        type: string
-
       display_name:
         description: "App Name (Optional)"
         default: "YouTube"
@@ -83,7 +77,6 @@ jobs:
       enable_ryd: ${{ inputs.enable_ryd }}
       enable_ytabc: ${{ inputs.enable_ytabc }}
       enable_demc: ${{ inputs.enable_demc }}
-      tweak_url: ${{ inputs.tweak_url }}
 
   package:
     name: Package IPA (Beta)
@@ -93,6 +86,15 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout (for version info)
+        uses: actions/checkout@v4
+
+      - name: Get tweak version from Makefile
+        id: version
+        run: |
+          version=$(grep '^PACKAGE_VERSION' Makefile | sed 's/.*= *//')
+          echo "tweak_version=$version" >> $GITHUB_OUTPUT
+
       - name: Download built debs
         uses: actions/download-artifact@v7
         with:
@@ -116,7 +118,6 @@ jobs:
       - name: Install cyan
         run: pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip
 
-
       - name: Inject tweaks into IPA
         run: |
           tweaks="ytplus.deb OpenYoutubeSafariExtension.appex"
@@ -129,7 +130,7 @@ jobs:
         uses: softprops/action-gh-release@v2.5.0
         with:
           tag_name: ytp-beta-${{ github.run_number }}
-          name: YouTubePlus Beta (${{ github.run_number }})
+          name: YouTubePlus v${{ steps.version.outputs.tweak_version }} Beta (${{ github.run_number }})
           files: YouTubePlus_Beta.ipa
           draft: true
 
