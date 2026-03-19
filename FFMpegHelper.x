@@ -112,7 +112,7 @@ static NSString *const kTempDirectoryName = @"YTLiteDownloads";
 
 + (void)closeFFmpegPipe:(NSString *)pipe {
     if (pipe) {
-        [MobileFFmpeg closeFFmpegPipe:pipe];
+        [MobileFFmpegConfig closeFFmpegPipe:pipe];
     }
 }
 
