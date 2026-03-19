@@ -71,6 +71,7 @@ jobs:
             --enable-swscale \
             --enable-avfilter \
             --enable-avdevice \
+            --enable-gpl \
             --enable-postproc
 
           make -j$(sysctl -n hw.ncpu)
