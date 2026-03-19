@@ -4,6 +4,10 @@
 
 static NSString *const kDefaultsSuiteName = @"com.dvntm.ytlite";
 
++ (instancetype)sharedInstance {
+    return [self standardUserDefaults];
+}
+
 + (YTLUserDefaults *)standardUserDefaults {
     static dispatch_once_t onceToken;
     static YTLUserDefaults *defaults = nil;
