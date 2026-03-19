@@ -245,10 +245,8 @@
 @end
 
 @interface ASDisplayNode ()
-@property (nonatomic, assign, readwrite) UIViewController *closestViewController;
-@property (atomic, assign, readwrite) ASNodeAncestryEnumerator *supernodes;
-@property (atomic, copy, readwrite) NSArray *yogaChildren;
-@property (atomic, readwrite) CALayer *layer;
+@property (atomic, assign) ASNodeAncestryEnumerator *supernodes;
+@property (atomic, strong) CALayer *layer;
 @end
 
 @interface ELMContainerNode : ASDisplayNode
