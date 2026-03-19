@@ -188,7 +188,7 @@ static YTPAPIHelper *_sharedInstance = nil;
         return;
     }
 
-    NSString *urlString = [NSString stringWithFormat:@"https://youtubei.googleapis.com/youtubei/v1/browse?key=%@", YTAPI_KEY];
+    NSString *urlString = [NSString stringWithFormat:@"https://youtubei.googleapis.com/youtubei/v1/browse?key=AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w"];
     NSURL *url = [NSURL URLWithString:urlString];
 
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
