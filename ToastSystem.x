@@ -2,6 +2,7 @@
 // Reconstructed from binary analysis of YTLite.dylib v5.2b4
 
 #import "YTLiteHeaders.h"
+#import <objc/runtime.h>
 
 // MARK: - ToastWindow
 
