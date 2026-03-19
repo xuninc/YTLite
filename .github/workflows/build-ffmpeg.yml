@@ -9,16 +9,21 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: brew install automake autoconf libtool pkg-config nasm
+        run: |
+          brew install automake autoconf libtool pkg-config nasm
+          # Show Xcode info for debugging
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+          xcrun --sdk iphoneos --show-sdk-version
 
       - name: Build FFmpeg static libraries
         run: |
-          set -e
+          set -ex
 
           FFMPEG_DIR="$GITHUB_WORKSPACE/FFmpeg"
           OUTPUT_LIB="$FFMPEG_DIR/lib"
@@ -35,7 +40,11 @@ jobs:
           git clone --depth 1 --branch n4.4 https://github.com/FFmpeg/FFmpeg.git /tmp/ffmpeg-src
           cd /tmp/ffmpeg-src
 
-          CFLAGS="-arch arm64 -isysroot $SDK_PATH -miphoneos-version-min=13.0 -Oz -fembed-bitcode -DMOBILE_FFMPEG_LTS"
+          # gas-preprocessor is needed for ARM assembly on iOS
+          curl -L https://raw.githubusercontent.com/FFmpegKit/gas-preprocessor/master/gas-preprocessor.pl -o /usr/local/bin/gas-preprocessor.pl
+          chmod +x /usr/local/bin/gas-preprocessor.pl
+
+          CFLAGS="-arch arm64 -isysroot $SDK_PATH -miphoneos-version-min=13.0 -Oz -DMOBILE_FFMPEG_LTS"
           LDFLAGS="-arch arm64 -isysroot $SDK_PATH -miphoneos-version-min=13.0"
 
           ./configure \
@@ -45,6 +54,7 @@ jobs:
             --arch=aarch64 \
             --sysroot="$SDK_PATH" \
             --cc="$CC" \
+            --as="gas-preprocessor.pl -arch aarch64 -- $CC" \
             --extra-cflags="$CFLAGS" \
             --extra-ldflags="$LDFLAGS" \
             --enable-pic \
@@ -69,9 +79,7 @@ jobs:
             --enable-avutil \
             --enable-swresample \
             --enable-swscale \
-            --enable-avfilter \
-            --enable-avdevice \
-            --enable-postproc
+            --enable-avfilter
 
           make -j$(sysctl -n hw.ncpu)
           make install
