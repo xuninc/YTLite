@@ -13,8 +13,8 @@ TARGET := iphone:clang:16.5:13.0
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = YTLite
-$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation SystemConfiguration Photos Security
-$(TWEAK_NAME)_CFLAGS = -fobjc-arc -DTWEAK_VERSION=$(PACKAGE_VERSION) -Wall -Wno-unused-variable -Wno-unused-function
+$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation SystemConfiguration Photos Security AVFoundation AVKit
+$(TWEAK_NAME)_CFLAGS = -fobjc-arc -DTWEAK_VERSION=$(PACKAGE_VERSION) -Wall -Wno-unused-variable -Wno-unused-function -Wno-deprecated-declarations
 $(TWEAK_NAME)_FILES = $(wildcard *.x Utils/*.m)
 
 include $(THEOS_MAKE_PATH)/tweak.mk
