@@ -58,7 +58,7 @@ jobs:
             --disable-autodetect \
             --enable-videotoolbox \
             --enable-audiotoolbox \
-            --disable-indev=audiotoolbox \
+            --disable-outdev=audiotoolbox \
             --disable-openssl \
             --disable-securetransport \
             --disable-xlib \
