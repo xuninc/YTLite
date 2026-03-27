@@ -203,6 +203,9 @@ static UIImage *YTImageNamed(NSString *imageName) {
 }
 %end
 
+// Forward declaration
+static NSURLSession *YTLSharedImageSession(void);
+
 // Remove video from watch history via Innertube API
 static void removeFromWatchHistory(NSString *videoID, UIResponder *responder) {
     if (!videoID) return;
