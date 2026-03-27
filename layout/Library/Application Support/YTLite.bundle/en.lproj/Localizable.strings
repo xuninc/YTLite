@@ -632,4 +632,10 @@
 "Conflicts.AcceptRisks" = "I Accept All Risks";
 "Conflicts.CloseYT" = "Close YouTube";
 
+/* Remove from Watch History */
+"RemoveFromHistoryButton" = "Remove from Watch History button";
+"RemoveFromHistoryButtonDesc" = "Adds a button to remove the current video from your watch history. Available on the player overlay and in the video menu.";
+"RemoveFromHistory" = "Remove from Watch History";
+"RemovedFromHistory" = "Removed from Watch History";
+
 "DonationReminder" = "Your support helps to make YouTube Plus even better.\n\nYou can contribute or choose to disable these notifications in the YouTube Plus settings. Thank you💜";

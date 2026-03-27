@@ -319,6 +319,7 @@ static NSString *GetCacheSize() {
                 [self switchWithTitle:@"RemoveNotInterestedMenu" key:@"removeNotInterestedMenu"],
                 [self switchWithTitle:@"RemoveDontRecommendMenu" key:@"removeDontRecommendMenu"],
                 [self switchWithTitle:@"RemoveReportMenu" key:@"removeReportMenu"],
+                [self switchWithTitle:@"RemoveFromHistoryButton" key:@"removeFromHistoryButton"],
                 [self switchWithTitle:@"NoContinueWatching" key:@"noContinueWatching"],
                 [self switchWithTitle:@"NoSearchHistory" key:@"noSearchHistory"],
                 [self switchWithTitle:@"NoRelatedWatchNexts" key:@"noRelatedWatchNexts"],

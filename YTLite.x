@@ -203,6 +203,43 @@ static UIImage *YTImageNamed(NSString *imageName) {
 }
 %end
 
+// Remove video from watch history via Innertube API
+static void removeFromWatchHistory(NSString *videoID, UIResponder *responder) {
+    if (!videoID) return;
+
+    NSString *urlString = @"https://www.youtube.com/youtubei/v1/browse/edit_playlist";
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:urlString]];
+    request.HTTPMethod = @"POST";
+    [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+
+    NSDictionary *body = @{
+        @"context": @{
+            @"client": @{
+                @"clientName": @"IOS",
+                @"clientVersion": @"20.45.3",
+                @"hl": [[NSLocale preferredLanguages] firstObject] ?: @"en"
+            }
+        },
+        @"playlistId": @"HL",
+        @"actions": @[@{
+            @"action": @"ACTION_REMOVE_VIDEO_BY_VIDEO_ID",
+            @"removedVideoId": videoID
+        }]
+    };
+
+    request.HTTPBody = [NSJSONSerialization dataWithJSONObject:body options:0 error:nil];
+
+    [[YTLSharedImageSession() dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSInteger statusCode = [(NSHTTPURLResponse *)response statusCode];
+            NSString *message = (statusCode >= 200 && statusCode < 300)
+                ? LOC(@"RemovedFromHistory")
+                : [NSString stringWithFormat:LOC(@"%@: %@"), LOC(@"Error"), error ? error.localizedDescription : @"Request failed"];
+            [[%c(YTToastResponderEvent) eventWithMessage:message firstResponder:responder] send];
+        });
+    }] resume];
+}
+
 %hook YTMainAppControlsOverlayView
 // Hide Autoplay Switch
 - (void)setAutoplaySwitchButtonRenderer:(id)arg1 { if (!ytlBool(@"hideAutoplay")) %orig; }
@@ -217,6 +254,42 @@ static UIImage *YTImageNamed(NSString *imageName) {
     if (!ytlBool(@"pauseOnOverlay")) return;
 
     visible ? [self.playerViewController pause] : [self.playerViewController play];
+}
+
+// Remove from Watch History overlay button
+- (void)layoutSubviews {
+    %orig;
+
+    if (!ytlBool(@"removeFromHistoryButton")) return;
+
+    static const char kYTLHistoryButtonKey;
+    UIButton *historyButton = objc_getAssociatedObject(self, &kYTLHistoryButtonKey);
+
+    if (!historyButton) {
+        historyButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        UIImage *icon = [UIImage systemImageNamed:@"clock.badge.xmark"];
+        [historyButton setImage:[icon imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
+        historyButton.tintColor = [UIColor whiteColor];
+        historyButton.translatesAutoresizingMaskIntoConstraints = NO;
+        [historyButton addTarget:self action:@selector(ytl_removeFromHistory) forControlEvents:UIControlEventTouchUpInside];
+        historyButton.accessibilityLabel = LOC(@"RemoveFromHistory");
+
+        [self addSubview:historyButton];
+        [NSLayoutConstraint activateConstraints:@[
+            [historyButton.topAnchor constraintEqualToAnchor:self.topAnchor constant:12],
+            [historyButton.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:12],
+            [historyButton.widthAnchor constraintEqualToConstant:32],
+            [historyButton.heightAnchor constraintEqualToConstant:32]
+        ]];
+
+        objc_setAssociatedObject(self, &kYTLHistoryButtonKey, historyButton, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
+
+%new
+- (void)ytl_removeFromHistory {
+    NSString *videoID = self.playerViewController.contentVideoID;
+    removeFromWatchHistory(videoID, self);
 }
 %end
 
@@ -666,6 +739,31 @@ void autoSkipShorts(YTPlayerViewController *self, YTSingleVideoController *video
     if (![actionsToRemove[identifier] boolValue]) {
         %orig;
     }
+}
+
+- (void)presentFromViewController:(UIViewController *)vc animated:(BOOL)animated completion:(void(^)(void))completion {
+    if (ytlBool(@"removeFromHistoryButton")) {
+        // Walk up the VC hierarchy to find the player and get the video ID
+        UIViewController *current = vc;
+        NSString *videoID = nil;
+        while (current) {
+            if ([current isKindOfClass:%c(YTWatchViewController)]) {
+                videoID = ((YTWatchViewController *)current).playerViewController.contentVideoID;
+                break;
+            }
+            current = current.parentViewController;
+        }
+
+        if (videoID) {
+            __weak UIViewController *weakVC = vc;
+            NSString *vid = [videoID copy];
+            [self addAction:[%c(YTActionSheetAction) actionWithTitle:LOC(@"RemoveFromHistory") iconImage:YTImageNamed(@"yt_outline_trash_24pt") style:0 handler:^{
+                removeFromWatchHistory(vid, weakVC);
+            }]];
+        }
+    }
+
+    %orig;
 }
 %end
 
