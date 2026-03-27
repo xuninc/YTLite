@@ -340,15 +340,17 @@ static NSString *GetCacheSize() {
         YTSettingsSectionItem *speed = [YTSettingsSectionItemClass itemWithTitle:LOC(@"HoldToSpeed")
         accessibilityIdentifier:@"YTLiteSectionItem"
         detailTextBlock:^NSString *() {
-            NSArray *speedLabels = @[LOC(@"Disabled"), LOC(@"Default"), @"0.25×", @"0.5×", @"0.75×", @"1.0×", @"1.25×", @"1.5×", @"1.75×", @"2.0×", @"3.0×", @"4.0×", @"5.0×"];
-            return speedLabels[ytlInt(@"speedIndex")];
+            return YTLSafeGet(YTLSpeedmasterDisplayLabels(), ytlInt(@"speedIndex"));
         }
         selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
             NSMutableArray <YTSettingsSectionItem *> *rows = [NSMutableArray array];
-            NSArray *speedLabels = @[LOC(@"Disable"), LOC(@"Default"), @"0.25×", @"0.5×", @"0.75×", @"1.0×", @"1.25×", @"1.5×", @"1.75×", @"2.0×", @"3.0×", @"4.0×", @"5.0×"];
+            NSArray *speedLabels = YTLSpeedmasterDisplayLabels();
+            // Picker uses "Disable" action label at index 0 instead of "Disabled" state label
+            NSMutableArray *pickerLabels = [speedLabels mutableCopy];
+            pickerLabels[0] = LOC(@"Disable");
 
-            for (NSUInteger i = 0; i < speedLabels.count; i++) {
-                NSString *title = speedLabels[i];
+            for (NSUInteger i = 0; i < pickerLabels.count; i++) {
+                NSString *title = pickerLabels[i];
                 YTSettingsSectionItem *item = [YTSettingsSectionItemClass checkmarkItemWithTitle:title titleDescription:nil selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
                     [settingsViewController reloadData];
                     ytlSetInt((int)arg1, @"speedIndex");
@@ -368,12 +370,11 @@ static NSString *GetCacheSize() {
         YTSettingsSectionItem *autoSpeed = [YTSettingsSectionItemClass itemWithTitle:LOC(@"DefaultPlaybackRate")
         accessibilityIdentifier:@"YTLiteSectionItem"
         detailTextBlock:^NSString *() {
-            NSArray *speedLabels = @[@"0.25×", @"0.5×", @"0.75×", @"1.0×", @"1.25×", @"1.5×", @"1.75×", @"2.0×", @"3.0×", @"4.0×", @"5.0×"];
-            return speedLabels[ytlInt(@"autoSpeedIndex")];
+            return YTLSafeGet(YTLSpeedDisplayLabels(), ytlInt(@"autoSpeedIndex"));
         }
         selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
             NSMutableArray <YTSettingsSectionItem *> *rows = [NSMutableArray array];
-            NSArray *speedLabels = @[@"0.25×", @"0.5×", @"0.75×", @"1.0×", @"1.25×", @"1.5×", @"1.75×", @"2.0×", @"3.0×", @"4.0×", @"5.0×"];
+            NSArray *speedLabels = YTLSpeedDisplayLabels();
 
             for (NSUInteger i = 0; i < speedLabels.count; i++) {
                 NSString *title = speedLabels[i];
@@ -395,12 +396,11 @@ static NSString *GetCacheSize() {
         YTSettingsSectionItem *wifiQuality = [YTSettingsSectionItemClass itemWithTitle:LOC(@"PlaybackQualityOnWiFi")
         accessibilityIdentifier:@"YTLiteSectionItem"
         detailTextBlock:^NSString *() {
-            NSArray *qualityLabels = @[LOC(@"Default"), LOC(@"Best"), @"2160p60", @"2160p", @"1440p60", @"1440p", @"1080p60", @"1080p", @"720p60", @"720p", @"480p", @"360p"];
-            return qualityLabels[ytlInt(@"wiFiQualityIndex")];
+            return YTLSafeGet(YTLQualityDisplayLabels(), ytlInt(@"wiFiQualityIndex"));
         }
         selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
             NSMutableArray <YTSettingsSectionItem *> *rows = [NSMutableArray array];
-            NSArray *qualityLabels = @[LOC(@"Default"), LOC(@"Best"), @"2160p60", @"2160p", @"1440p60", @"1440p", @"1080p60", @"1080p", @"720p60", @"720p", @"480p", @"360p"];
+            NSArray *qualityLabels = YTLQualityDisplayLabels();
 
             for (NSUInteger i = 0; i < qualityLabels.count; i++) {
                 NSString *title = qualityLabels[i];
@@ -423,12 +423,11 @@ static NSString *GetCacheSize() {
         YTSettingsSectionItem *cellQuality = [YTSettingsSectionItemClass itemWithTitle:LOC(@"PlaybackQualityOnCellular")
         accessibilityIdentifier:@"YTLiteSectionItem"
         detailTextBlock:^NSString *() {
-            NSArray *qualityLabels = @[LOC(@"Default"), LOC(@"Best"), @"2160p60", @"2160p", @"1440p60", @"1440p", @"1080p60", @"1080p", @"720p60", @"720p", @"480p", @"360p"];
-            return qualityLabels[ytlInt(@"cellQualityIndex")];
+            return YTLSafeGet(YTLQualityDisplayLabels(), ytlInt(@"cellQualityIndex"));
         }
         selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
             NSMutableArray <YTSettingsSectionItem *> *rows = [NSMutableArray array];
-            NSArray *qualityLabels = @[LOC(@"Default"), LOC(@"Best"), @"2160p60", @"2160p", @"1440p60", @"1440p", @"1080p60", @"1080p", @"720p60", @"720p", @"480p", @"360p"];
+            NSArray *qualityLabels = YTLQualityDisplayLabels();
 
             for (NSUInteger i = 0; i < qualityLabels.count; i++) {
                 NSString *title = qualityLabels[i];
@@ -579,12 +578,19 @@ static NSString *GetCacheSize() {
                 [self switchWithTitle:@"Advanced" key:@"advancedMode"],
 
                 [%c(YTSettingsSectionItem) itemWithTitle:LOC(@"ClearCache") titleDescription:nil accessibilityIdentifier:@"YTLiteSectionItem" detailTextBlock:^NSString *() { return GetCacheSize(); } selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger arg1) {
+                    id __weak weakResponder = [self parentResponder];
                     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                         NSString *cachePath = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject;
-                        [[NSFileManager defaultManager] removeItemAtPath:cachePath error:nil];
+                        NSError *error = nil;
+                        BOOL success = [[NSFileManager defaultManager] removeItemAtPath:cachePath error:&error];
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            id strongResponder = weakResponder;
+                            if (strongResponder) {
+                                NSString *message = success ? LOC(@"Done") : [NSString stringWithFormat:LOC(@"%@: %@"), LOC(@"Error"), error.localizedDescription ?: @"Unknown error"];
+                                [[%c(YTToastResponderEvent) eventWithMessage:message firstResponder:strongResponder] send];
+                            }
+                        });
                     });
-
-                    [[%c(YTToastResponderEvent) eventWithMessage:LOC(@"Done") firstResponder:[self parentResponder]] send];
 
                     return YES;
                 }],

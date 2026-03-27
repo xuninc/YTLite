@@ -91,6 +91,7 @@ static inline NSString* extractIdWithFormat(GPBUnknownFieldSet *fields, NSIntege
         return %orig;
 
     GPBMessage *shareEntity = [%c(GPBMessage) deserializeFromString:updateShareSheetCommand.serializedShareEntity];
+    if (!shareEntity) return %orig;
     GPBUnknownFieldSet *fields = shareEntity.unknownFields;
     NSString *shareUrl;
 
@@ -99,6 +100,7 @@ static inline NSString* extractIdWithFormat(GPBUnknownFieldSet *fields, NSIntege
         if ([shareEntityClip.lengthDelimitedList count] != 1)
             return %orig;
         GPBMessage *clipMessage = [%c(GPBMessage) parseFromData:[shareEntityClip.lengthDelimitedList firstObject] error:nil];
+        if (!clipMessage) return %orig;
         shareUrl = extractIdWithFormat(clipMessage.unknownFields, 1, @"https://youtube.com/clip/%@");
     }
 
@@ -121,6 +123,6 @@ static inline NSString* extractIdWithFormat(GPBUnknownFieldSet *fields, NSIntege
         return %orig;
 
     UIActivityViewController *activityViewController = [[UIActivityViewController alloc]initWithActivityItems:@[shareUrl] applicationActivities:nil];
-    [[%c(YTUIUtils) topViewControllerForPresenting] presentViewController:activityViewController animated:YES completion:^{}];
+    [[%c(YTUIUtils) topViewControllerForPresenting] presentViewController:activityViewController animated:YES completion:nil];
 }
 %end
