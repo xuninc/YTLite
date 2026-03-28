@@ -1557,8 +1557,13 @@ static NSURL *newCoverURL(NSURL *originalURL) {
         });
     }
 
-    // Show a brief toast confirming the tweak loaded
+    // Show tweak loaded confirmation with settings hook status
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [[%c(YTToastResponderEvent) eventWithMessage:LOC(@"TweakLoaded") firstResponder:[%c(YTUIUtils) topViewControllerForPresenting]] send];
+        BOOL hasSettingsClass = %c(YTAppSettingsPresentationData) != nil;
+        BOOL hasSectionManager = %c(YTSettingsSectionItemManager) != nil;
+        NSString *msg = [NSString stringWithFormat:@"YouTube Plus loaded (Settings: %@, Manager: %@)",
+            hasSettingsClass ? @"OK" : @"MISSING",
+            hasSectionManager ? @"OK" : @"MISSING"];
+        [[%c(YTToastResponderEvent) eventWithMessage:msg firstResponder:[%c(YTUIUtils) topViewControllerForPresenting]] send];
     });
 }
