@@ -1542,19 +1542,9 @@ static NSURL *newCoverURL(NSURL *originalURL) {
         ytlSetBool(NO, @"reExplore");
     }
 
-    if (!ytlBool(@"advancedMode") && !ytlBool(@"advancedModeReminder")) {
-        ytlSetBool(YES, @"advancedModeReminder");
-
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            YTAlertView *alertView = [%c(YTAlertView) confirmationDialogWithAction:^{
-                ytlSetBool(YES, @"advancedMode");
-            }
-            actionTitle:LOC(@"EnableAdvancedMode")
-            cancelTitle:LOC(@"NotNow")];
-            alertView.title = LOC(@"WelcomeTitle");
-            alertView.subtitle = LOC(@"WelcomeAdvancedPrompt");
-            [alertView show];
-        });
+    // Auto-enable advanced mode — no reason to hide settings from the user
+    if (!ytlBool(@"advancedMode")) {
+        ytlSetBool(YES, @"advancedMode");
     }
 
     // Show tweak loaded confirmation with settings hook status
