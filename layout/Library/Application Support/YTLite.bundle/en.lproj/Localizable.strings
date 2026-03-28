@@ -638,4 +638,11 @@
 "RemoveFromHistory" = "Remove from Watch History";
 "RemovedFromHistory" = "Removed from Watch History";
 
+/* Tweak load & first-run */
+"TweakLoaded" = "YouTube Plus loaded successfully";
+"WelcomeTitle" = "YouTube Plus";
+"WelcomeAdvancedPrompt" = "YouTube Plus has been installed successfully!\n\nWould you like to enable Advanced Mode? This shows all available settings including player customization, Shorts controls, quality presets, and more.\n\nYou can change this later in YouTube Plus settings.";
+"EnableAdvancedMode" = "Enable Advanced Mode";
+"NotNow" = "Not Now";
+
 "DonationReminder" = "Your support helps to make YouTube Plus even better.\n\nYou can contribute or choose to disable these notifications in the YouTube Plus settings. Thank you💜";

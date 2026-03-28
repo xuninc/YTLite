@@ -1549,11 +1549,16 @@ static NSURL *newCoverURL(NSURL *originalURL) {
             YTAlertView *alertView = [%c(YTAlertView) confirmationDialogWithAction:^{
                 ytlSetBool(YES, @"advancedMode");
             }
-            actionTitle:LOC(@"Yes")
-            cancelTitle:LOC(@"No")];
-            alertView.title = @"YTLite";
-            alertView.subtitle = [NSString stringWithFormat:LOC(@"AdvancedModeReminder"), @"YTLite", LOC(@"Version"), LOC(@"Advanced")];
+            actionTitle:LOC(@"EnableAdvancedMode")
+            cancelTitle:LOC(@"NotNow")];
+            alertView.title = LOC(@"WelcomeTitle");
+            alertView.subtitle = LOC(@"WelcomeAdvancedPrompt");
             [alertView show];
         });
     }
+
+    // Show a brief toast confirming the tweak loaded
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [[%c(YTToastResponderEvent) eventWithMessage:LOC(@"TweakLoaded") firstResponder:[%c(YTUIUtils) topViewControllerForPresenting]] send];
+    });
 }
