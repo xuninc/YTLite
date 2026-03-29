@@ -1,5 +1,9 @@
 #import "FFmpegExecution.h"
 
+@interface MobileFFmpeg : NSObject
++ (NSString *)argumentsToString:(NSArray *)arguments;
+@end
+
 @implementation FFmpegExecution
 
 - (instancetype)initWithExecutionId:(long long)execId andArguments:(id)arguments {
