@@ -4,9 +4,12 @@
 #import <UIKit/UIKit.h>
 #import <MediaPlayer/MediaPlayer.h>
 
+@class MPVolumeController;
+@class MPVolumeHUDController;
+
 @interface CustomHUD : NSObject
 
-@property (nonatomic, strong) MPVolumeController *controller;
+@property (nonatomic, strong) id controller;
 
 - (instancetype)init;
 - (void)addToController;

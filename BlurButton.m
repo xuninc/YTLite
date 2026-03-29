@@ -19,7 +19,7 @@
     [button addSubview:effectView];
 
     UIImageView *imgView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 18.0, 18.0)];
-    button.imageView = imgView;
+    button.buttonImageView = imgView;
 
     [imgView setCenter:[effectView center]];
     imgView.contentMode = UIViewContentModeScaleAspectFit;
@@ -34,21 +34,29 @@
     if (menu == nil) {
         [button addTarget:target action:action forControlEvents:UIControlEventTouchUpInside];
     } else {
-        [button setMenu:menu];
-        [button setShowsMenuAsPrimaryAction:YES];
+        if (@available(iOS 14.0, *)) {
+            [button setMenu:menu];
+            [button setShowsMenuAsPrimaryAction:YES];
+        }
     }
 
     return button;
 }
 
++ (instancetype)createButtonWithImage:(UIImage *)image
+                               target:(id)target
+                               action:(SEL)action {
+    return [self createButtonWithImage:image target:target action:action menu:nil];
+}
+
 - (void)setHighlighted:(BOOL)highlighted {
     [super setHighlighted:highlighted];
     CGFloat alpha = highlighted ? 0.25 : 1.0;
-    [self.imageView setAlpha:alpha];
+    [self.buttonImageView setAlpha:alpha];
 }
 
 - (void)dealloc {
-    self.imageView = nil;
+    self.buttonImageView = nil;
 }
 
 @end

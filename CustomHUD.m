@@ -5,19 +5,28 @@
 - (instancetype)init {
     self = [super init];
     if (self) {
-        self.controller = [[MPVolumeController alloc] init];
+        Class MPVolumeControllerClass = NSClassFromString(@"MPVolumeController");
+        if (MPVolumeControllerClass) {
+            self.controller = [[MPVolumeControllerClass alloc] init];
+        }
     }
     return self;
 }
 
 - (void)addToController {
-    MPVolumeHUDController *hudController = [MPVolumeHUDController sharedInstance];
-    [hudController addController:self];
+    Class MPVolumeHUDControllerClass = NSClassFromString(@"MPVolumeHUDController");
+    if (MPVolumeHUDControllerClass) {
+        id hudController = [MPVolumeHUDControllerClass sharedInstance];
+        [hudController addController:self];
+    }
 }
 
 - (void)removeFromController {
-    MPVolumeHUDController *hudController = [MPVolumeHUDController sharedInstance];
-    [hudController removeController:self];
+    Class MPVolumeHUDControllerClass = NSClassFromString(@"MPVolumeHUDController");
+    if (MPVolumeHUDControllerClass) {
+        id hudController = [MPVolumeHUDControllerClass sharedInstance];
+        [hudController removeController:self];
+    }
 }
 
 - (void)setVolumeLevel:(float)level {
@@ -30,8 +39,8 @@
 
 - (UIWindowScene *)windowSceneForVolumeDisplay {
     UIApplication *app = [UIApplication sharedApplication];
-    NSArray<UIScene *> *connectedScenes = [app connectedScenes];
-    UIWindowScene *scene = [connectedScenes anyObject];
+    NSSet<UIScene *> *connectedScenes = [app connectedScenes];
+    UIWindowScene *scene = (UIWindowScene *)[connectedScenes anyObject];
     return scene;
 }
 
