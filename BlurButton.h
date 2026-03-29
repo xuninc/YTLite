@@ -10,7 +10,7 @@
 + (instancetype)createButtonWithImage:(UIImage *)image
                                target:(id)target
                                action:(SEL)action
-                                 menu:(UIMenu *)menu API_AVAILABLE(ios(14.0));
+                                 menu:(id)menu;
 + (instancetype)createButtonWithImage:(UIImage *)image
                                target:(id)target
                                action:(SEL)action;

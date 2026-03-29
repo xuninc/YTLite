@@ -5,7 +5,7 @@
 + (instancetype)createButtonWithImage:(UIImage *)image
                                target:(id)target
                                action:(SEL)action
-                                 menu:(UIMenu *)menu {
+                                 menu:(id)menu {
     BlurButton *button = [[BlurButton alloc] initWithFrame:CGRectMake(0, 0, 28.0, 28.0)];
 
     UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterial];

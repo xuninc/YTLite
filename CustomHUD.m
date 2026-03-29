@@ -1,4 +1,5 @@
 #import "CustomHUD.h"
+#import <objc/message.h>
 
 @implementation CustomHUD
 
@@ -14,38 +15,36 @@
 }
 
 - (void)addToController {
-    Class MPVolumeHUDControllerClass = NSClassFromString(@"MPVolumeHUDController");
-    if (MPVolumeHUDControllerClass) {
-        id hudController = [MPVolumeHUDControllerClass sharedInstance];
-        [hudController addController:self];
+    Class cls = NSClassFromString(@"MPVolumeHUDController");
+    if (cls) {
+        id hudController = ((id(*)(id, SEL))objc_msgSend)(cls, sel_registerName("sharedInstance"));
+        ((void(*)(id, SEL, id))objc_msgSend)(hudController, sel_registerName("addController:"), self);
     }
 }
 
 - (void)removeFromController {
-    Class MPVolumeHUDControllerClass = NSClassFromString(@"MPVolumeHUDController");
-    if (MPVolumeHUDControllerClass) {
-        id hudController = [MPVolumeHUDControllerClass sharedInstance];
-        [hudController removeController:self];
+    Class cls = NSClassFromString(@"MPVolumeHUDController");
+    if (cls) {
+        id hudController = ((id(*)(id, SEL))objc_msgSend)(cls, sel_registerName("sharedInstance"));
+        ((void(*)(id, SEL, id))objc_msgSend)(hudController, sel_registerName("removeController:"), self);
     }
 }
 
 - (void)setVolumeLevel:(float)level {
-    [self.controller setVolumeValue:level];
+    ((void(*)(id, SEL, float))objc_msgSend)(self.controller, sel_registerName("setVolumeValue:"), level);
 }
 
 - (float)volumeLevel {
-    return [self.controller volumeValue];
+    return ((float(*)(id, SEL))objc_msgSend)(self.controller, sel_registerName("volumeValue"));
 }
 
 - (UIWindowScene *)windowSceneForVolumeDisplay {
-    UIApplication *app = [UIApplication sharedApplication];
-    NSSet<UIScene *> *connectedScenes = [app connectedScenes];
-    UIWindowScene *scene = (UIWindowScene *)[connectedScenes anyObject];
-    return scene;
+    NSSet<UIScene *> *connectedScenes = [[UIApplication sharedApplication] connectedScenes];
+    return (UIWindowScene *)[connectedScenes anyObject];
 }
 
 - (NSString *)volumeAudioCategory {
-    return [self.controller volumeAudioCategory];
+    return ((id(*)(id, SEL))objc_msgSend)(self.controller, sel_registerName("volumeAudioCategory"));
 }
 
 - (void)dealloc {
