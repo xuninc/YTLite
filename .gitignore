@@ -1,3 +1,7 @@
 .theos/
 packages/
 .DS_Store
+decompiled/
+deb_extract/
+ytlite.deb
+data.tar
