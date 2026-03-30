@@ -101,50 +101,44 @@ static dispatch_once_t _sharedOnceToken;
 }
 
 - (void)prepareForPresentation {
-    id snapshot = [[self snapshotViewAfterScreenUpdates:NO] retain];
+    id snapshot = [self snapshotViewAfterScreenUpdates:NO];
     [snapshot removeFromSuperview];
-    [snapshot release];
     [self setHidden:YES];
     self.alpha = 0.0;
 }
 
 - (void)updateToastText:(id)text value:(double)value {
     id toastImage = self.toastImage;
-    id retainedText = [text retain];
 
     // Get the current image from toastImage and update it
-    id currentImage = [[toastImage image] retain];
+    id currentImage = [toastImage image];
     [self.toastImage setImage:currentImage];
-    [currentImage release];
 
     // Update progress bar
     [self.toastProgress setProgress:(float)(value / 100.0)];
 
     // If compact mode, don't set main label text
-    id labelText = retainedText;
+    id labelText = text;
     if (self.isCompact) {
         labelText = nil;
     }
     [self.toastLabel setText:labelText];
-    [retainedText release];
 
     // Format and set sub-label text based on style
     long long currentStyle = self.style;
-    id formattedSubText = [[self formatValueText:value forStyle:currentStyle] retain];
+    id formattedSubText = [self formatValueText:value forStyle:currentStyle];
     [self.toastSubLabel setText:formattedSubText];
-    [formattedSubText release];
 
     // Update accessibility value
     [self updateAccessibilityValue:value forStyle:currentStyle];
 
     // Get new image for current value
-    id newImage = [[self imageForValue:value] retain];
-    id currentToastImage = [[self.toastImage image] retain];
+    id newImage = [self imageForValue:value];
+    id currentToastImage = [self.toastImage image];
     BOOL isSameImage = [currentToastImage isEqual:newImage];
-    [currentToastImage release];
 
     if (!isSameImage) {
-        id capturedImage = [newImage retain];
+        id capturedImage = newImage;
         [UIView transitionWithView:self.toastImage
                           duration:0.5
                            options:UIViewAnimationOptionTransitionCrossDissolve
@@ -152,10 +146,7 @@ static dispatch_once_t _sharedOnceToken;
                             [self.toastImage setImage:capturedImage];
                         }
                         completion:nil];
-        [capturedImage release];
     }
-
-    [newImage release];
 }
 
 - (void)hideToast {
@@ -289,7 +280,6 @@ static dispatch_once_t _sharedOnceToken;
         // Brightness
         UIScreen *mainScreen = [UIScreen mainScreen];
         mainScreen.brightness = value / 100.0;
-        [mainScreen release];
         return;
     }
 }
@@ -307,11 +297,7 @@ static dispatch_once_t _sharedOnceToken;
     UIViewController *rootVC = [windowScene rootViewController];
     id statusBarManager = [rootVC statusBarManager];
     NSInteger orientation = [statusBarManager statusBarOrientation];
-    [rootVC release];
-    [windowScene release];
-    [app release];
     BOOL result = ((NSUInteger)(orientation - 3) < 2);
-    [statusBarManager release];
     return result;
 }
 

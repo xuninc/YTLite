@@ -27,6 +27,9 @@
 - (void)hideToast;
 - (void)setupConstraints;
 - (void)clearConstraints;
+- (NSString *)formatValueText:(double)value forStyle:(long long)style;
+- (void)updateAccessibilityValue:(double)value forStyle:(long long)style;
+- (UIImage *)imageForValue:(double)value;
 - (UIImage *)imgForVal:(double)value;
 - (NSString *)subLabelForVal:(double)value style:(NSInteger)style;
 - (void)setupSubForStyle:(NSInteger)style;

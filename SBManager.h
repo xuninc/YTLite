@@ -13,6 +13,7 @@
 
 + (instancetype)sharedManager;
 - (instancetype)init;
+- (NSArray *)sponsorBlockCategories;
 - (void)getSegmentsForID:(NSString *)videoID;
 - (void)handleSegmentsResponse:(NSData *)data error:(NSError *)error videoID:(NSString *)videoID;
 
