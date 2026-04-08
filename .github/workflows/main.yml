@@ -91,6 +91,8 @@ jobs:
     needs: build-tweaks
     permissions:
       contents: write
+    env:
+      HAS_SIGNING: ${{ secrets.P12_BASE64 != '' }}
 
     steps:
       - name: Download built debs
@@ -106,7 +108,7 @@ jobs:
 
       - name: Download and validate IPA
         run: |
-          wget "${{ github.event.inputs.ipa_url }}" --no-verbose -O youtube.ipa
+          wget "${{ github.event.inputs.ipa_url }}" --no-verbose --no-check-certificate -O youtube.ipa
           file_type=$(file --mime-type -b youtube.ipa)
           if [[ "$file_type" != "application/x-ios-app" && "$file_type" != "application/zip" ]]; then
             echo "::error::Validation failed: The downloaded file is not a valid IPA. Detected type: $file_type."
@@ -125,14 +127,91 @@ jobs:
           done
           cyan -i youtube.ipa -o YouTubePlus_${{ github.event.inputs.tweak_version }}.ipa -uwef $tweaks -n "${{ github.event.inputs.display_name }}" -b ${{ github.event.inputs.bundle_id }}
 
+      - name: Sign IPA
+        if: ${{ env.HAS_SIGNING == 'true' }}
+        env:
+          P12_BASE64: ${{ secrets.P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          MOBILEPROVISION_BASE64: ${{ secrets.MOBILEPROVISION_BASE64 }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$P12_BASE64" | base64 --decode > cert.p12
+          printf '%s' "$MOBILEPROVISION_BASE64" | base64 --decode > profile.mobileprovision
+          KEYCHAIN="build.keychain"
+          security create-keychain -p "actions" "$KEYCHAIN"
+          security default-keychain -s "$KEYCHAIN"
+          security unlock-keychain -p "actions" "$KEYCHAIN"
+          security set-keychain-settings -t 3600 "$KEYCHAIN"
+          security import cert.p12 -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "actions" "$KEYCHAIN"
+          SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" | head -1 | grep -o '".*"' | tr -d '"')
+          IPA="YouTubePlus_${{ github.event.inputs.tweak_version }}.ipa"
+          mkdir -p ipa_contents
+          unzip -q "$IPA" -d ipa_contents
+          APP_DIR=$(find ipa_contents/Payload -maxdepth 1 -name "*.app" -type d | head -1)
+          cp profile.mobileprovision "$APP_DIR/embedded.mobileprovision"
+          security cms -D -i profile.mobileprovision > profile_full.plist
+          /usr/libexec/PlistBuddy -x -c "Print :Entitlements" profile_full.plist > entitlements.plist
+          find "$APP_DIR" -name "*.framework" -type d | while read item; do codesign --force --sign "$SIGNING_IDENTITY" --timestamp=none "$item" || true; done
+          find "$APP_DIR" -name "*.dylib" -type f | while read item; do codesign --force --sign "$SIGNING_IDENTITY" --timestamp=none "$item" || true; done
+          codesign --force --sign "$SIGNING_IDENTITY" --timestamp=none --entitlements entitlements.plist "$APP_DIR"
+          cd ipa_contents && zip -qr "../YouTubePlus_signed.ipa" Payload && cd ..
+          rm -rf ipa_contents cert.p12 profile.mobileprovision profile_full.plist entitlements.plist
+
+      - name: Generate OTA manifest
+        if: ${{ env.HAS_SIGNING == 'true' }}
+        run: |
+          IPA_URL="https://github.com/${{ github.repository }}/releases/download/ytp-${{ github.run_number }}/YouTubePlus_signed.ipa"
+          BUNDLE_ID="${{ github.event.inputs.bundle_id }}"
+          DISPLAY_NAME="${{ github.event.inputs.display_name }}"
+          cat > manifest.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>items</key>
+              <array>
+                  <dict>
+                      <key>assets</key>
+                      <array>
+                          <dict>
+                              <key>kind</key>
+                              <string>software-package</string>
+                              <key>url</key>
+                              <string>${IPA_URL}</string>
+                          </dict>
+                      </array>
+                      <key>metadata</key>
+                      <dict>
+                          <key>bundle-identifier</key>
+                          <string>${BUNDLE_ID}</string>
+                          <key>bundle-version</key>
+                          <string>1.0</string>
+                          <key>kind</key>
+                          <string>software</string>
+                          <key>title</key>
+                          <string>${DISPLAY_NAME}</string>
+                      </dict>
+                  </dict>
+              </array>
+          </dict>
+          </plist>
+          PLIST
+
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2.5.0
         with:
           tag_name: ytp-${{ github.run_number }}
           name: YouTubePlus v${{ github.event.inputs.tweak_version }} (${{ github.run_number }})
-          files: YouTubePlus_${{ github.event.inputs.tweak_version }}.ipa
-          draft: true
+          files: |
+            YouTubePlus_${{ github.event.inputs.tweak_version }}.ipa
+            YouTubePlus_signed.ipa
+            manifest.plist
 
-      - name: Output Release URL
+      - name: OTA Install Link
+        if: ${{ env.HAS_SIGNING == 'true' }}
         run: |
-          echo "::notice::Release available at: https://github.com/${{ github.repository }}/releases"
+          OTA="itms-services://?action=download-manifest&url=https://github.com/${{ github.repository }}/releases/download/ytp-${{ github.run_number }}/manifest.plist"
+          echo "::notice::OTA Install: $OTA"
+          echo "## OTA Install" >> $GITHUB_STEP_SUMMARY
+          echo "[Install YouTube Plus]($OTA)" >> $GITHUB_STEP_SUMMARY
