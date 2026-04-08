@@ -149,6 +149,9 @@ jobs:
           mkdir -p ipa_contents
           unzip -q "$IPA" -d ipa_contents
           APP_DIR=$(find ipa_contents/Payload -maxdepth 1 -name "*.app" -type d | head -1)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${{ github.event.inputs.bundle_id }}" "$APP_DIR/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName ${{ github.event.inputs.display_name }}" "$APP_DIR/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName ${{ github.event.inputs.display_name }}" "$APP_DIR/Info.plist"
           cp profile.mobileprovision "$APP_DIR/embedded.mobileprovision"
           security cms -D -i profile.mobileprovision > profile_full.plist
           /usr/libexec/PlistBuddy -x -c "Print :Entitlements" profile_full.plist > entitlements.plist
