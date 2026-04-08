@@ -38,7 +38,7 @@ jobs:
 
       - name: Download YTLite deb
         run: |
-          YTLITE_VERSION=$(curl -s https://api.github.com/repos/dayanch96/YTLite/releases/latest | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))")
+          YTLITE_VERSION="5.2b4"
           echo "YTLITE_VERSION=$YTLITE_VERSION" >> $GITHUB_ENV
           curl -sL "https://github.com/dayanch96/YTLite/releases/download/v${YTLITE_VERSION}/com.dvntm.ytlite_${YTLITE_VERSION}_iphoneos-arm64.deb" -o ytlite.deb
 
