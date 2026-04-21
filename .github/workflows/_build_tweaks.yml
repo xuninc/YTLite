@@ -126,7 +126,7 @@ jobs:
 
       - name: Clone YouPiP
         if: ${{ inputs.enable_youpip }}
-        run: git clone --quiet --depth=1 https://github.com/xuninc/YouPiP.git
+        run: git clone --quiet --depth=1 https://github.com/PoomSmart/YouPiP.git
 
       - name: Clone YTUHD
         if: ${{ inputs.enable_ytuhd }}
